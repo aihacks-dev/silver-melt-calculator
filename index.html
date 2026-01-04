@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>90% Silver Melt Calculator</title>
+  <style>
+    body { font-family: -apple-system, system-ui, Arial; margin: 18px; line-height: 1.35; }
+    .card { border: 1px solid #ddd; border-radius: 12px; padding: 14px; margin: 12px 0; }
+    input, select { font-size: 18px; padding: 10px; width: 100%; box-sizing: border-box; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .big { font-size: 22px; font-weight: 700; }
+    .muted { color: #666; }
+    .mono { font-variant-numeric: tabular-nums; }
+    .pill { display:inline-block; padding: 4px 10px; border-radius: 999px; background:#f3f3f3; }
+  </style>
+</head>
+<body>
+  <h2>90% Silver Melt Calculator</h2>
+  <div class="card">
+    <label class="muted">Silver spot price ($/troy oz)</label>
+    <input id="spot" inputmode="decimal" placeholder="e.g. 74.00" value="74.00" />
+    <p class="muted" style="margin:10px 0 0;">Uses 0.715 ozt per $1 face (circulated 90%).</p>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <div>
+        <div class="muted">Dime (0.10 FV)</div>
+        <div class="big mono" id="dime">$0.00</div>
+        <div class="muted mono" id="dimeOz">0.07150 ozt</div>
+      </div>
+      <div>
+        <div class="muted">Quarter (0.25 FV)</div>
+        <div class="big mono" id="quarter">$0.00</div>
+        <div class="muted mono" id="quarterOz">0.17875 ozt</div>
+      </div>
+      <div>
+        <div class="muted">Half (0.50 FV)</div>
+        <div class="big mono" id="half">$0.00</div>
+        <div class="muted mono" id="halfOz">0.35750 ozt</div>
+      </div>
+      <div>
+        <div class="muted">$1.00 Face</div>
+        <div class="big mono" id="one">$0.00</div>
+        <div class="muted"><span class="pill mono" id="xface">0.0× face</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="muted" style="margin-bottom:8px;">Shop offer mode (optional)</div>
+    <select id="mode">
+      <option value="none">Off</option>
+      <option value="xface">Shop quotes × face</option>
+      <option value="pct">Shop pays % of melt</option>
+      <option value="minus">Shop pays spot − $/oz</option>
+    </select>
+    <div style="margin-top:10px;">
+      <input id="offer" inputmode="decimal" placeholder="Enter value (e.g. 48, 95, 3)" disabled />
+      <div class="muted" style="margin-top:8px;" id="offerHelp"></div>
+    </div>
+
+    <div style="margin-top:12px;" class="muted">
+      <div><strong>Implied shop payout</strong></div>
+      <div class="mono" id="offerLine">—</div>
+    </div>
+  </div>
+
+<script>
+  // Constants (troy oz of silver per face value, circulated)
+  const OZ_PER_1FV = 0.715;
+  const OZ_DIME = OZ_PER_1FV * 0.10;
+  const OZ_QUARTER = OZ_PER_1FV * 0.25;
+  const OZ_HALF = OZ_PER_1FV * 0.50;
+
+  const $ = (id) => document.getElementById(id);
+
+  function money(x) {
+    return x.toLocaleString(undefined, { style: "currency", currency: "USD" });
+  }
+
+  function num(x) {
+    const v = Number(String(x).replace(/[^0-9.]/g,''));
+    return Number.isFinite(v) ? v : 0;
+  }
+
+  function update() {
+    const spot = num($("spot").value);
+
+    const melt1 = spot * OZ_PER_1FV;
+    const dime = spot * OZ_DIME;
+    const quarter = spot * OZ_QUARTER;
+    const half = spot * OZ_HALF;
+
+    $("one").textContent = money(melt1);
+    $("xface").textContent = `${melt1.toFixed(2)}× face`;
+    $("dime").textContent = money(dime);
+    $("quarter").textContent = money(quarter);
+    $("half").textContent = money(half);
+
+    // Offer mode
+    const mode = $("mode").value;
+    const offerVal = num($("offer").value);
+
+    let payoutPer1 = null;
+
+    if (mode === "xface") {
+      // offerVal is × face paid
+      payoutPer1 = offerVal; // dollars per $1FV
+      $("offerHelp").textContent = "Enter the shop’s × face payout (e.g., 48 means $48 per $1 FV).";
+    } else if (mode === "pct") {
+      payoutPer1 = melt1 * (offerVal / 100);
+      $("offerHelp").textContent = "Enter the shop’s payout as % of melt (e.g., 95 means 95% of melt).";
+    } else if (mode === "minus") {
+      // shop pays (spot - offerVal) * ounces
+      payoutPer1 = Math.max(0, (spot - offerVal)) * OZ_PER_1FV;
+      $("offerHelp").textContent = "Enter $/oz discount from spot (e.g., 3 means spot − $3/oz).";
+    } else {
+      $("offerHelp").textContent = "";
+    }
+
+    if (mode === "none") {
+      $("offerLine").textContent = "—";
+      return;
+    }
+
+    // Derived values from payoutPer1
+    const impliedXFace = payoutPer1;
+    const impliedPct = melt1 > 0 ? (payoutPer1 / melt1) * 100 : 0;
+    const impliedSpot = OZ_PER_1FV > 0 ? (payoutPer1 / OZ_PER_1FV) : 0;
+
+    const payoutDime = payoutPer1 * 0.10;
+    const payoutQuarter = payoutPer1 * 0.25;
+    const payoutHalf = payoutPer1 * 0.50;
+
+    $("offerLine").textContent =
+      `${money(payoutPer1)} per $1 FV (${impliedXFace.toFixed(2)}× face) • `
+      + `${impliedPct.toFixed(1)}% of melt • `
+      + `implied $${impliedSpot.toFixed(2)}/oz • `
+      + `dime ${money(payoutDime)}, quarter ${money(payoutQuarter)}, half ${money(payoutHalf)}`;
+  }
+
+  function onModeChange() {
+    const mode = $("mode").value;
+    $("offer").disabled = (mode === "none");
+    $("offer").value = "";
+    update();
+  }
+
+  $("spot").addEventListener("input", update);
+  $("mode").addEventListener("change", onModeChange);
+  $("offer").addEventListener("input", update);
+
+  update();
+</script>
+</body>
+</html>
