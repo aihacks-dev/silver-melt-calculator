@@ -101,6 +101,35 @@
       </div>
     </div>
   </div>
+  <div class="card">
+    <h3>Morgan / Peace Dollar Buy Target</h3>
+
+    <div class="muted" style="margin-bottom:10px;">
+      Common-date Morgan and Peace dollars both use 0.77344 troy oz actual silver.
+    </div>
+
+    <label class="muted">Target buy % of melt</label>
+    <input id="dollarPct" inputmode="decimal" placeholder="e.g. 85" value="85" />
+
+    <div class="row" style="margin-top:14px;">
+      <div>
+        <div class="muted">Melt value per dollar</div>
+        <div class="big mono" id="dollarMelt">$0.00</div>
+      </div>
+      <div>
+        <div class="muted">Max pay per coin</div>
+        <div class="big mono" id="dollarTarget">$0.00</div>
+      </div>
+      <div>
+        <div class="muted">Silver content</div>
+        <div class="big mono">0.77344 oz</div>
+      </div>
+      <div>
+        <div class="muted">Buy multiplier</div>
+        <div class="big mono" id="dollarPctLine">85.0%</div>
+      </div>
+    </div>
+  </div>
 
 <script>
   // Constants (circulated/dealer standard)
@@ -108,6 +137,7 @@
   const OZ_DIME = OZ_PER_1FV * 0.10;      // 0.07150
   const OZ_QUARTER = OZ_PER_1FV * 0.25;   // 0.17875
   const OZ_HALF = OZ_PER_1FV * 0.50;      // 0.35750
+  const OZ_DOLLAR = 0.77344;
 
   // Profit section uses explicit constants too (same values)
   const OZ_PER_DIME = OZ_DIME;
@@ -154,6 +184,18 @@
     $("breakevenSpot").textContent = `$${breakeven.toFixed(2)}`;
   }
 
+function updateDollarTarget() {
+    const spot = num($("spot").value);
+    const pct = num($("dollarPct").value);
+
+    const melt = spot * OZ_DOLLAR;
+    const target = melt * (pct / 100);
+
+    $("dollarMelt").textContent = money(melt);
+    $("dollarTarget").textContent = money(target);
+    $("dollarPctLine").textContent = `${pct.toFixed(1)}%`;
+  }
+
   function update() {
     const spot = num($("spot").value);
 
@@ -186,6 +228,8 @@
     } else {
       $("offerHelp").textContent = "";
     }
+
+    updateDollarTarget();
 
     if (mode === "none") {
       $("offerLine").textContent = "—";
@@ -223,6 +267,7 @@
 
   $("buyPrice").addEventListener("input", updateProfit);
   $("coinType").addEventListener("change", updateProfit);
+  $("dollarPct").addEventListener("input", updateDollarTarget);
 
   update();
 </script>
